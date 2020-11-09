@@ -15,7 +15,6 @@ Planned structure is as follows:
   * [Configuration](configuration.md)
   * Identity & Authentication
     * [Overview](identity_overview.md)
-    * [Environment Setup](identity_setup.md)
     * [Examples](identity_examples.md)
   * [Tracing](tracing.md)
   * Troubleshooting
