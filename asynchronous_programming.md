@@ -1,6 +1,6 @@
 # Asynchronous programming
 
-When we started re-designing the [new Azure SDK for Java](https://github.com/Azure/azure-sdk-for-java#client-new-releases), we initially only offered asynchronous clients for interacting with Azure services. These clients would have only provided asynchronous, non-blocking APIs that are ideal for network operations, as they do not block threads waiting to get a response from the service. Our goal was to enable application developers using Azure SDK to utilize their system resources efficiently to build scalable applications. When we conducted user studies, we realized that it was important to include synchronous clients to cater to a wider audience, and also make our client libraries [approachable](https://azure.github.io/azure-sdk/general_introduction.html#approachable) for users not familiar with asynchronous programming. So, all new Azure SDK for Java offers both asynchronous and synchronous clients. We do, however, recommend using the asynchronous clients for production systems to maximize the utilization of your system resources. In this post we'll cover basic reactive programming concepts that developers using Azure SDK for Java can apply to quickly get started on using async clients.
+When the Azure SDK team started to architect the redesign of the [new Azure SDK for Java](https://github.com/Azure/azure-sdk-for-java#client-new-releases), initially only non-blocking, asynchronous APIs were to be offered to developers for interacting with Azure services. Doing so would enable application developers using Azure SDK to utilize their system resources efficiently to build scalable applications. However, when the Azure SDK team conducted user studies, it was quickly realized that it was important to include synchronous clients to cater to a wider audience, and also make our client libraries [approachable](https://azure.github.io/azure-sdk/general_introduction.html#approachable) for users not familiar with asynchronous programming. Given this, all Java client libraries in the Azure SDK for Java offers both asynchronous and synchronous clients. It is, however, recommended to use the asynchronous clients for production systems to maximize the utilization of system resources.
 
 ## Reactive Streams
 
@@ -8,7 +8,7 @@ If you look at the [async client](https://azure.github.io/azure-sdk/java_design.
 
 Java 8 introduced some very useful features like Streams, Lambdas and CompletableFuture. `CompletableFuture`s provide callback-based, non-blocking capabilities and the `CompletionStage` interface allowed for easy composition of a series of asynchronous operations. [Lambdas](https://docs.oracle.com/javase/tutorial/java/javaOO/lambdaexpressions.html) make these push-based APIs more readable. Lastly, [Streams](https://docs.oracle.com/javase/8/docs/api/java/util/stream/package-summary.html) provide functional-style operations to handle a collection of data elements. However, there are some limitations. Streams are synchronous and cannot be reused. `CompletableFuture` allows you to make a single request, provides support for a callback, and expects a _single_ response. Many cloud services require the ability to stream data - Event Hubs for instance. 
 
-Reactive streams overcome these limitations by supporting streaming transfer of elements from a source to the subscriber of the data. When a subscriber requests data from a source, the source can send any number of results back. These results don't have to be sent all at once. The transfer can happen over a period of time as and when the source has data to send. In this model, the subscriber registers event handlers to process data when it arrives. This push-based interaction notifies the subscriber when the source is ready to send data, when there is an error or when there's no further data to send. This is accomplished by having distinct signals - `onSubscribe()` to indicate the data transfer is about to begin, `onError()` to indicate there was an error which also marks the end of data transfer, `onComplete()` to indicate successful completion of data transfer. Unlike Java Streams, reactive streams treat errors as first-class events and have a dedicated channel for the source to communicate any errors to the subscriber. Additionally, reactive streams allow subscriber to negotiate the rate at which the data is transferred that can transform these streams into a push-pull model. 
+Reactive streams overcome these limitations by supporting streaming transfer of elements from a source to the subscriber of the data. When a subscriber requests data from a source, the source can send any number of results back. These results don't have to be sent all at once. The transfer can happen over a period of time as and when the source has data to send. In this model, the subscriber registers event handlers to process data when it arrives. This push-based interaction notifies the subscriber when the source is ready to send data, when there is an error or when there's no further data to send. This is accomplished by having distinct signals - `onSubscribe()` to indicate the data transfer is about to begin, `onError()` to indicate there was an error which also marks the end of data transfer, `onComplete()` to indicate successful completion of data transfer. Unlike Java Streams, reactive streams treat errors as first-class events and have a dedicated channel for the source to communicate any errors to the subscriber. Additionally, reactive streams allow subscriber to negotiate the rate at which the data is transferred that can transform these streams into a push-pull model.
 
 The [Reactive Streams](https://github.com/reactive-streams/reactive-streams-jvm#reactive-streams) specification provides a standard for how the transfer of data should occur. At a high-level, the following four interfaces are defined and the specification specifies rules on how these interfaces should be implemented.
 
@@ -63,6 +63,7 @@ public static void main(String[] args) throws InterruptedException {
     TimeUnit.SECONDS.sleep(5);
 }
 ```
+
 Notice that after calling `getConfigurationSetting()` API on the client, we subscribed to the result and provided three separate lambdas - the first one consumes data received from the service which is triggered upon successful response, the second callback is triggered if there was an error while retrieving the configuration and the third one is invoked when the data stream is complete, meaning no more data elements are expected from this stream.
 
 >**Note:** The main thread sleeps for 5 seconds at the end so that the program does not terminate before the async operation completes. The main thread that called `subscribe()` will not wait until the network call to App Configuration service is made and a response is received. After the call to `subscribe()`, the main thread proceeds to execute the next line and prints "Done" on console and completes the program if we did not add `sleep`. In production systems, you might continue to process something else but in this example you can simply add a small delay by calling `Thread.sleep()` or use a `CountDownLatch` to give the async operation a chance to complete.
@@ -127,6 +128,7 @@ public static void main(String[] args) {
     TimeUnit.SECONDS.sleep(5);
 }
 ```
+
 When the subscriber first "connects" to the publisher, the publisher hands the subscriber an instance of `Subscription` which manages the state of the data transfer. This `Subscription` is the medium through which the subscriber can apply backpressure by calling `request()` method to specify how many more data elements it can handle. 
 
 If the subscriber requests more than one data element each time `onNext()` is called, `request(10)` for example, the publisher will send the next 10 elements immediately, if they are available or when they become available. These elements are accumulated in a buffer on the subscriber's end and since each `onNext()` call will request 10 more, the backlog keeps growing until either the publisher has no more data elements to send or the subscriber's buffer overflows resulting in out of memory errors. 
@@ -151,11 +153,12 @@ public static void main(String[] args) {
             ex -> System.out.println("Error receiving events: " + ex.getMessage()),
             () -> System.out.println("Successfully completed receiving all events"));
 
-    TimeUnit.SECONDS.sleep(5); 
+    TimeUnit.SECONDS.sleep(5);
     // when you are ready to cancel the subscription
     disposable.dispose();
 }
 ```
+
 or call the `cancel()` method on `Subscription`:
 
 ```java
@@ -192,14 +195,14 @@ public static void main(String[] args) {
         });
 
     TimeUnit.SECONDS.sleep(5); 
-}    
+}
 ```
 
 ## Pagination using PagedFlux
 
 Many Azure services have APIs that return a collection of results. For example, listing all the configurations stored in App Configuration service. There may be thousands of configurations and sending them all at once as one single HTTP response could cause high latency, increase the size of payload and may not even fit into the memory of the client application. So, typically, such APIs support pagination. Each request to the service returns a single page with a limited set of results and a link to the next page. To get the results from next page, another request has to be made to the service. 
 
-The Azure Java clients - both sync and async - hide the details of paging and provides application developers with a simple abstraction to iterate through the results. The pagination happens behind the scenes, on-demand. The async clients return a [`PagedFlux`](https://docs.microsoft.com/en-us/java/api/com.azure.core.http.rest.pagedflux?view=azure-java-stable) which is a type of `Flux` that allows you to iterate through the results one item at a time or one page at a time. For example, if you are interested in listing the configurations stored in App Configuration and iterate through each configuration and don't really care about paging, you can simply treat the `PagedFlux` as a `Flux` and `subscribe()` to iterate through each configuration, as shown below.
+The Azure Java clients - both sync and async - hide the details of paging and provides application developers with a simple abstraction to iterate through the results. The pagination happens behind the scenes, on-demand. The async clients return a [`PagedFlux`](https://docs.microsoft.com/java/api/com.azure.core.http.rest.pagedflux?view=azure-java-stable) which is a type of `Flux` that allows you to iterate through the results one item at a time or one page at a time. For example, if you are interested in listing the configurations stored in App Configuration and iterate through each configuration and don't really care about paging, you can simply treat the `PagedFlux` as a `Flux` and `subscribe()` to iterate through each configuration, as shown below.
 
 ```java
 public static void main(String[] args) throws InterruptedException {
@@ -212,9 +215,9 @@ public static void main(String[] args) throws InterruptedException {
         .subscribe(config -> System.out.println("Config value: " + config.getValue()),
             ex -> System.out.println("Error listing configuration: " + ex.getMessage()),
             () -> System.out.println("Successfully listed all configurations"));
-   
-   TimeUnit.SECONDS.sleep(5); 
-}   
+
+   TimeUnit.SECONDS.sleep(5);
+}
 ```
 
 If you are interested in iterating the results by page, you can use the `byPage()` method on `PagedFlux`. This method returns a `Flux` of `PagedResponse` type that includes details of HTTP response like the HTTP status code, response headers, link to next page and any other information specific to that page.
@@ -232,8 +235,8 @@ public static void main(String[] args) throws InterruptedException {
             page -> System.out.println("Next page link: " + page.getContinuationToken() + ", results: " + page.getElements()),
             ex -> System.out.println("Error listing configuration: " + ex.getMessage()),
             () -> System.out.println("Successfully listed all configurations"));
-    
-    TimeUnit.SECONDS.sleep(5); 
+
+    TimeUnit.SECONDS.sleep(5);
 }
 ```
 
@@ -241,9 +244,9 @@ Note that there's no difference in performance or the number of calls made to th
 
 ## Long Running Operations and PollerFlux
 
-Certain operations on Azure may require extended processing times to successfully complete a user request. For example, copying data from a source URL to a Storage blob or training a model to recognize forms are operations that may take a few seconds to several minutes. Such operations are referred to as long running operations and these operations, typically, acknowledge the user request to start the long running operation by returning a "request id" immediately. The client will then periodically poll the service to get the status of the operation. When the terminal state has reached either because the operation completed successfully or failed, the polling stops. The client can then request the final response of the operation. 
+Certain operations on Azure may require extended processing times to successfully complete a user request. For example, copying data from a source URL to a Storage blob or training a model to recognize forms are operations that may take a few seconds to several minutes. Such operations are referred to as long running operations and these operations, typically, acknowledge the user request to start the long running operation by returning a "request id" immediately. The client will then periodically poll the service to get the status of the operation. When the terminal state has reached either because the operation completed successfully or failed, the polling stops. The client can then request the final response of the operation.
 
-For such operations, the Java async clients return a type of `Flux` known as the [`PollerFlux`](https://docs.microsoft.com/en-us/java/api/com.azure.core.util.polling.pollerflux?view=azure-java-stable). Each data element emitted by `PollerFlux` is of type [`AsyncPollResponse`](https://docs.microsoft.com/en-us/java/api/com.azure.core.util.polling.asyncpollresponse?view=azure-java-stable) and holds the result of the polling operation done periodically by the SDK. Client applications interested in keeping track of the progress of the long running operation may subscribe to this flux and inspect the status of each response as shown below:
+For such operations, the Java async clients return a type of `Flux` known as the [`PollerFlux`](https://docs.microsoft.com/java/api/com.azure.core.util.polling.pollerflux?view=azure-java-stable). Each data element emitted by `PollerFlux` is of type [`AsyncPollResponse`](https://docs.microsoft.com/java/api/com.azure.core.util.polling.asyncpollresponse?view=azure-java-stable) and holds the result of the polling operation done periodically by the SDK. Client applications interested in keeping track of the progress of the long running operation may subscribe to this flux and inspect the status of each response as shown below:
 
 ```java
 public static void main(String[] args) throws InterruptedException {
@@ -253,8 +256,8 @@ public static void main(String[] args) throws InterruptedException {
 
     formRecognizerAsyncClient.beginRecognizeContentFromUrl("{form-url")
             .subscribe(response -> System.out.println("Status of long running operation: " + response.getStatus()));
-    
-    TimeUnit.SECONDS.sleep(5); 
+
+    TimeUnit.SECONDS.sleep(5);
 }
 ```
 
@@ -279,10 +282,11 @@ public static void main(String[] args) throws InterruptedException {
         .subscribe(formPages -> processFormPages(formPages),
             ex -> countDownLatch.countDown(),
             () -> countDownLatch.countDown());
-    
+
     countDownLatch.await();
 }
 ```
+
 In this example, we use `CountDownLatch` to wait until the long running operation is complete or if an error occurs. The `onError` and `onComplete` handlers both decrement the latch count to stop the program gracefully.
 
 ## Conclusion
@@ -290,24 +294,3 @@ In this example, we use `CountDownLatch` to wait until the long running operatio
 Threads are expensive resources and should not be wasted waiting for response from remote service calls. As the adoption of microservices architecture increases, the need to scale and utilize resources efficiently becomes vital. Asynchronous APIs are favorable when there are network-bound operations. The new Azure SDK for Java offers a rich set of APIs for async operations to help maximize your system resources. We highly encourage you to try out our async clients.
 
 If you need more information, you can [lookup which operator to use](https://projectreactor.io/docs/core/release/reference/#which-operator) that best suits your task at hand.
-
-## Azure SDK Links
-
-- Azure SDK Website: [aka.ms/azsdk](https://aka.ms/azsdk)
-- Azure SDK Intro (3 minute video): [aka.ms/azsdk/intro](https://aka.ms/azsdk/intro)
-- Azure SDK Intro Deck (PowerPoint deck): [aka.ms/azsdk/intro/deck](https://aka.ms/azsdk/intro/deck)
-- Azure SDK Releases: [aka.ms/azsdk/releases](https://aka.ms/azsdk/releases)
-- Azure SDK Blog: [aka.ms/azsdk/blog](https://aka.ms/azsdk/blog)
-- Azure SDK Twitter: [twitter.com/AzureSDK](https://twitter.com/AzureSDK)
-- Azure SDK Design Guidelines: [aka.ms/azsdk/guide](https://aka.ms/azsdk/guide)
-- Azure SDKs & Tools: [azure.microsoft.com/downloads](https://azure.microsoft.com/downloads)
-- Azure SDK Central Repository: [github.com/azure/azure-sdk](https://github.com/azure/azure-sdk#azure-sdk)
-- Azure SDK for .NET: [github.com/azure/azure-sdk-for-net](https://github.com/azure/azure-sdk-for-net)
-- Azure SDK for Java: [github.com/azure/azure-sdk-for-java](https://github.com/azure/azure-sdk-for-java)
-- Azure SDK for Python: [github.com/azure/azure-sdk-for-python](https://github.com/azure/azure-sdk-for-python)
-- Azure SDK for JavaScript/TypeScript: [github.com/azure/azure-sdk-for-js](https://github.com/azure/azure-sdk-for-js)
-- Azure SDK for Android: [github.com/Azure/azure-sdk-for-android](https://github.com/Azure/azure-sdk-for-android)
-- Azure SDK for iOS: [github.com/Azure/azure-sdk-for-ios](https://github.com/Azure/azure-sdk-for-ios)
-- Azure SDK for Go: [github.com/Azure/azure-sdk-for-go](https://github.com/Azure/azure-sdk-for-go)
-- Azure SDK for C: [github.com/Azure/azure-sdk-for-c](https://github.com/Azure/azure-sdk-for-c)
-- Azure SDK for C++: [github.com/Azure/azure-sdk-for-cpp](https://github.com/Azure/azure-sdk-for-cpp)

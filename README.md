@@ -6,7 +6,7 @@ Planned structure is as follows:
 * Concepts
   * [Overview](overview.md)
   * Client library concepts
-    * [Patterns & best practices](patterns_best_practices.md)
+    * [HTTP clients & pipeline](http_client_pipeline.md)
     * [Asynchronous programming](asynchronous_programming.md)
     * [Pagination & iteration](pagination.md)
     * [Long-Running operations](long_running_operations.md)

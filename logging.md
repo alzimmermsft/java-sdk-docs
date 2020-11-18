@@ -3,7 +3,7 @@
 The Azure client libraries for Java log using [SLF4J](https://www.slf4j.org/), allowing for applications using these libraries to use their preferred logging framework. More details on logging using SLF4J can be found 
 [in the SLF4J manual](https://www.slf4j.org/manual.html). 
 
-### Configuring Logging
+## Configuring Logging
 
 By default, logging should be configured using an SLF4J-supported logging framework. This starts by including a [relevant SLF4J logging implementation as a dependency from your project](http://www.slf4j.org/manual.html#projectDep), but then continues onward to configuring your logger to work as necessary in your environment (such as setting log levels, configuring which classes do and do not log, etc). Some examples are provided below, but for more detail, refer to the documentation for your chosen logging framework.
 
@@ -21,7 +21,8 @@ Logging, as already stated, uses SLF4J, but there is a fall-back, default logger
 ## Use `ClientLogger` for logging information.
 
 Here is the code to use `ClientLogger`
-```
+
+```java
    ClientLogger logger = new ClientLogger("$ClassName"); // Use the string of class name or the class type.
    logger.info("I am info");
 ```
@@ -34,7 +35,7 @@ For more information related to log4j, please refer [here](http://logging.apache
 
 **Adding maven dependencies**
 
-```
+```xml
 <!-- https://mvnrepository.com/artifact/org.slf4j/slf4j-log4j12 -->
 <dependency>
     <groupId>org.slf4j</groupId>
@@ -92,7 +93,7 @@ For more information related to log4j2, please refer [here](https://logging.apac
 
 **Adding maven dependencies**
 
-```
+```xml
 <!-- https://mvnrepository.com/artifact/org.apache.logging.log4j/log4j-slf4j-impl -->
 <dependency>
     <groupId>org.apache.logging.log4j</groupId>
@@ -149,7 +150,7 @@ To enable logback logging in config file, create a file called `logback.xml` und
 
 **Adding maven dependencies**
 
-```
+```xml
 <!-- https://mvnrepository.com/artifact/ch.qos.logback/logback-classic -->
 <dependency>
     <groupId>ch.qos.logback</groupId>
@@ -183,7 +184,7 @@ on configuring `logback.xml` can be found [here](https://logback.qos.ch/manual/c
 
 A simple logback configuration to log to console can be configured as follows:
 
-```xml 
+```xml
 <?xml version="1.0" encoding="UTF-8"?>
 <configuration>
   <appender name="Console"
@@ -204,6 +205,7 @@ A simple logback configuration to log to console can be configured as follows:
 Spring looks at this file for various configurations including logging. You can configure your application to read logback configurations from any file. So, this is where you will link your `logback.xml` to your spring application. Add the following line to do so:
 
 Create another file called `application.properties` under the same directory `./src/main/resources`.
+
 ```properties
 logging.config=classpath:logback.xml
 ```
